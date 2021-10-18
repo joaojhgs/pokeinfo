@@ -1,0 +1,21 @@
+#PokemonList {
+    padding-inline-start: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-gap: 10px;
+}
+
+#pokemon {
+    grid-template-columns: 3fr 1fr;
+}
+
+.vertical {
+    width: 60%;
+    height: 20px;
+}
+.vertical {
+    box-shadow: inset 0px 4px 6px #ccc;
+  }
+.progress-bar {
+    box-shadow: inset 0px 4px 6px rgba(100,100,100,0.6);
+}
