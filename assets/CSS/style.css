@@ -8,6 +8,11 @@
 #pokemon {
     grid-template-columns: 3fr 1fr;
 }
+
+#pokeFilters {
+    width: 50%;
+}
+
 .progress {
     width: 70%;
     height: 20px;
@@ -53,4 +58,54 @@
 .popover-content {
     text-align: center;
 }
-  
+
+.header {
+    width: fill;
+    height: 5.5em;
+    display: inline-block;
+}
+
+.dark {
+    background-color: #343a40;
+}
+.black {
+    background-color: #000000;
+}
+
+.logo {
+    max-width: auto;
+    max-height: auto;
+}
+
+.tete {
+    visibility: hidden;
+    content: "<center id='animation'></center>";
+    background-color: black;
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    z-index: 1000000;
+    left: 0;
+    top: 0;
+    opacity: 0.95;
+    transition: all 0.5s ease;
+}
+.animationImg {
+    top:33%;
+    left:33%;
+    display: absolute;
+    transition: all 0.5s ease;
+}
+
+#cImg{
+    width: 30%;
+    height: 30%;
+    display: absolute;
+    visibility: hidden;
+}
+#nImg{
+    width: 30%;
+    height: 30%;
+    display: absolute;
+    visibility: hidden;
+}

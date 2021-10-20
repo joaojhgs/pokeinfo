@@ -3,10 +3,11 @@
 
 <head>
   <title>PokeInfo</title>
-  <link rel="shortcut icon" type="image/jpg" href="assets/Images/icon.png" />
+  <link rel="shortcut icon" type="image/jpg" href="assets/Images/favicon.ico" />
   <!--Bootstrap CSS-->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
     integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.6.1/font/bootstrap-icons.css">
 
   <!--Custom CSS-->
   <link href="assets/CSS/style.css" rel="stylesheet">
@@ -15,20 +16,32 @@
   <meta name="viewport" content="width=device-width">
 </head>
 
-<body>
+<body class="dark">
+
+   
   <center>
+    <strong><h1 style="color:white;">PokeInfo</h1></strong>
     <div class="mx-auto rounded">
-      <div class="col-6">
-        <form class="search">
-          <div class="input-group">
+      <div class="searchMenu">
+        <div class="search btn-group col-9">
+            <button id="btnGroupDrop1" type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="bi bi-funnel"></i>
+            </button>
+            <ul id="dropdownFilters" class="dropdown-menu" aria-labelledby="btnGroupDrop1">
+              
+            </ul>
             <input type="text" class="form-control" id="searchBar" placeholder="Ex: Name or ID Nº" required="">
+            <span id="pokelistResults" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"></span>
           </div>
-        </form>
+        </div>
+        <div id="pokeFilters" class="btn-group rounded mt-3 mb-1">
+      
+        </div>
       </div>
     </div>
   </center>
 
-  <div></div>
+  
   <div class="pt-4" id="results">
     <div class="list-group">
       <ul class="justify-content-center" id="PokemonList">
@@ -102,8 +115,8 @@
 
 
         </div>
-        <div class="modal-footer justify-content-center">
-          <button type="button" class="btn btn-primary">Evolve</button>
+        <div id="pokeEvolutionFooter" class="modal-footer justify-content-center">
+          
         </div>
       </div>
     </div>
@@ -115,8 +128,11 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
     integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
     crossorigin="anonymous"></script>
-  <script>
-  </script>
+    <center>
+    <div id="animation" class="tete">
+      
+    </div>
+  </center>
 </body>
 
 </html>

@@ -4,14 +4,39 @@ const SearchBar = document.getElementById("searchBar");
 const pokeInfoModal = document.getElementById('pokeInfoModal');
 
 //This class is used to create the filter array
-function Filter(kind, filterContent) {
+function Filter(kind, filterContent, name) {
     this.kind = kind;
     this.filterContent = filterContent;
+    this.name = '';
+    this.name = name;
+
 }
 
+//
+function Pokemon(name, url){
+    this.name = name;
+    this.url = url;
+
+}
+
+function Evolution(cName, cId, cSpriteUrl, nName, nId, nSpriteUrl, totalEvolutions, currentIndex){
+    this.cName = cName;
+    this.cId = cId;
+    this.cSpriteUrl = cSpriteUrl;
+    this.nName = nName;
+    this.nId = nId;
+    this.nSpriteUrl = nSpriteUrl;
+    this.totalEvolutions = totalEvolutions;
+    this.cIndex = currentIndex;
+
+}
 //Global variables used across functions and classes
 var pokemonList = [];
 var ActiveFilters = [];
+
+/********************************
+ * Input Layer' functions
+*/
 
 //SearchBar Listener
 SearchBar.addEventListener('keyup', (e) => {
@@ -22,18 +47,27 @@ SearchBar.addEventListener('keyup', (e) => {
     //If there's pre-existent entry on the array, remove it and add the new one
     if(index == -1){
         searchString = e.target.value;
-        ActiveFilters.push(new Filter('searchString', searchString));
+        ActiveFilters.push(new Filter('searchString', searchString, searchString));
     } else {
         ActiveFilters.splice(index, 1);
         searchString = e.target.value;
-        ActiveFilters.push(new Filter('searchString', searchString));
+        ActiveFilters.push(new Filter('searchString', searchString, searchString));
     }
     //Calls the filterHandler
     filterHandle();
 });
 
+//Modal open listener
+pokeInfoModal.addEventListener('show.bs.modal', function (event) {
+    updateModal('btn', event, '', '');
+});
 
-function filterByType(id){
+
+/********************************
+ * Processing Layer' functions
+*/
+
+function filterByType(id, name){
     //loops through the ActiveFilters array to find the ammount of active type filters
     let i=0;
     for(let filter of ActiveFilters){
@@ -48,18 +82,19 @@ function filterByType(id){
         if(i > 1){
             for(let filter of ActiveFilters){
                 if(!filter.filterContent.includes(id)){
-                    ActiveFilters.push(new Filter('type', id));
+                    ActiveFilters.push(new Filter('type', id, name));
                     console.log(ActiveFilters);
                     filterHandle();
                 }
             }
         } else {
             //Otherwise, just add the filter
-            ActiveFilters.push(new Filter('type', id));
+            ActiveFilters.push(new Filter('type', id, name));
             console.log(ActiveFilters);
             filterHandle();
         }
     }
+
 }
 
 async function filterHandle(){
@@ -124,64 +159,152 @@ async function filterHandle(){
         }
     }
 
+    if(ActiveFilters.length == 0){
+        finalFilteredList = pokemonList;
+    }
     //Calls the function to update the frontpage with the final filtered list
+
     showPlist(finalFilteredList);
+    updateFiltersInfo();
     return;
 }
 
-//Quando o Modal for aberto, vai pegar a info do pokemon e atualizar o conteudo.
-pokeInfoModal.addEventListener('show.bs.modal', function (event) {
-    updateModal(event);
-});
+//Fetches generic data from the API.
+async function getInfo(kind, id) {
+    const info = await fetch(`https://pokeapi.co/api/v2/${kind}/${id}`);
+    var data = await info.json();
+    return data;
+}
 
-async function updateModal(pokemon){
-        // Button that triggered the modal
-        var button = pokemon.relatedTarget
-        // Get the id from the button
-        var id = button.getAttribute('poke-id');
-        // Get the pokeName from the button
-        pokeName = button.getAttribute('poke-name')
+//Initial Data Fetch
+async function getPlist() {
+    try {
+        //I'm usign a 898 limit because higher id pokemons are just variants / evolutions of the main ones (they'll be shown on the pokemon page)
+        const requestList = await fetch('https://pokeapi.co/api/v2/pokemon/?limit=1000000');
+        const data = await requestList.json();
+        pokemonList = data.results;
+        console.log(pokemonList);
+        showPlist(pokemonList);
+
+    } catch (error) {
+        console.error(error);
+    }
+}
+
+function removeFilter(filterContent){
+    let index = ActiveFilters.findIndex(obj => obj.filterContent==filterContent);
+    if(index > -1){
+        ActiveFilters.splice(index, 1);
+    }
+    console.log(ActiveFilters);
+    filterHandle();
+    updateFiltersInfo();
+}
+
+async function evolutionFinder(pokeInfo){
+    let pokeSpecie = await fetch(pokeInfo.species.url);
+    pokeSpecie = await pokeSpecie.json();
+    let evolutionChain = await (await fetch(pokeSpecie.evolution_chain.url)).json();
+    let evolutions = [];
+    console.log(evolutionChain);
+    //Push the first (current pokemon) to the evolution chain array before starting the recursive branch exploration
+    evolutions.push(new Pokemon(evolutionChain.chain.species.name, evolutionChain.chain.species.url));
+    function recursiveEvolutionChain(chain){
+        //Loops through all the members of the evolves_to array, in order to detect different possible branches of evolution
+        for(let branch of chain.evolves_to){
+            if(branch.evolves_to.length >= 0){
+                evolutions.push(new Pokemon(branch.species.name, branch.species.url));
+                //Calls the recursive function to explore the next evolves_to
+                recursiveEvolutionChain(branch);
+            } else {
+                //Reached the end of the tree, then return.
+                return;
+            }
+        }
+    }
+    
+    //chamada inicial da função recursiva
+    recursiveEvolutionChain(evolutionChain.chain);
+
+    console.log(evolutions);
+    //Encontra em que parte da evolution_chain o pokemon sendo visualisado se encontra no momento
+    let currentIndex = evolutions.findIndex(obj => obj.name==pokeInfo.name);
+    let cId = evolutions[currentIndex].url.replace('https://pokeapi.co/api/v2/pokemon-species/', '').replace('/', '');
+    let nId = evolutions[currentIndex+1].url.replace('https://pokeapi.co/api/v2/pokemon-species/', '').replace('/', '');
+
+    let pokemonEvolution = new Evolution(evolutions[currentIndex].name, cId, `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${cId}.png`, evolutions[currentIndex+1].name, nId, `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${nId}.png`, evolutions.length, currentIndex);
+
+    console.log(evolutions[currentIndex]);
+    console.log(evolutions[currentIndex+1]);
+    console.log(pokemonEvolution);
+
+    return pokemonEvolution;
+}
+
+/********************************
+ * Output Layer' functions
+*/
+
+//Dynamically sets all the HTML and data based on the requested pokemon
+async function updateModal(kind, pokemon, pokemonN, idN){
+    let button;
+    let id;
+    let pokeName;
+
+        if(kind == 'btn'){
+            // Button that triggered the modal
+            button = pokemon.relatedTarget;
+            // Get the id from the button
+            id = button.getAttribute('poke-id');
+            // Get the pokeName from the button
+            pokeName = button.getAttribute('poke-name')
+        } else if(kind == 'param'){
+            // Get the id 
+            id = idN;
+            // Get the pokeName
+            pokeName = pokemonN;
+        }
         
+        
+        // Get important html elements by their selectors
+        let modalTitle = pokeInfoModal.querySelector('.modal-title');
+        let pokeHeight = pokeInfoModal.querySelector('.pokeHeight');
+        let pokeWeight = pokeInfoModal.querySelector('.pokeWeight');
+        let pokeType = pokeInfoModal.querySelector('.pokeType');
+        let pokeMoves = pokeInfoModal.querySelector('.pokeMoves');
+        let pokeLearnableMoves = pokeInfoModal.querySelector('.pokeLearnableMoves');
+        let pokeAbilities = pokeInfoModal.querySelector('.pokeAbilities');
+        let pokeStats = pokeInfoModal.querySelector('.pokeStats');
+        let modalFooter = document.getElementById('pokeEvolutionFooter');
 
-        // Update the modal's content.
-        var modalTitle = pokeInfoModal.querySelector('.modal-title');
-        var pokeHeight = pokeInfoModal.querySelector('.pokeHeight');
-        var pokeWeight = pokeInfoModal.querySelector('.pokeWeight');
-        var pokeType = pokeInfoModal.querySelector('.pokeType');
-        var pokeMoves = pokeInfoModal.querySelector('.pokeMoves');
-        var pokeLearnableMoves = pokeInfoModal.querySelector('.pokeLearnableMoves');
-        var pokeAbilities = pokeInfoModal.querySelector('.pokeAbilities');
-        var pokeStats = pokeInfoModal.querySelector('.pokeStats');
-
-        //var modalBodyInput = exampleModal.querySelector('.modal-body input')
-
-        var pokeInfo = await getInfo('pokemon', id);
+        let pokeInfo = await getInfo('pokemon', id);
         console.log(pokeInfo);
 
-        modalTitle.innerHTML = `<img class="img-fluid" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png">${pokeName}</img>`
+        //Update the Modal HTML dynamically with the request pokemon info.
 
+        //Defines the modal title
+        modalTitle.innerHTML = `<img class="img-fluid" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png">${pokeName}</img>`
+        //Defines Weight and Height
         pokeHeight.textContent = `Height: ${pokeInfo.height} cm`;
         pokeWeight.textContent = `Weight: ${pokeInfo.weight} kg`;
+
+        //Create a clickable list of Types the pokemon is part of (Can trigger a filter)
         pokeType.innerHTML = '';
-        //Create a button (which will filter the list onclick) for each pokemon type the pokemon is part of
         for( let type of pokeInfo.types){
-            pokeTypeId = type.type.url.replace("https://pokeapi.co/api/v2/type/","");
+            let pokeTypeId = type.type.url.replace("https://pokeapi.co/api/v2/type/","");
             pokeTypeId = pokeTypeId.replace("/", "");
 
-            pokeType.innerHTML += `<button type="button" class="btn btn-outline-primary" onclick="filterByType(${pokeTypeId})" data-bs-dismiss="modal">${type.type.name}</button>`;
+            pokeType.innerHTML += `<button type="button" class="btn btn-outline-primary" onclick="filterByType(${pokeTypeId}, '${type.type.name}')" data-bs-dismiss="modal">${type.type.name}</button>`;
         }
-        pokeLearnableMoves.textContent = pokeInfo.moves.length;
-        //Create a list object for every move the pokemon can learn
-        pokeMoves.innerHTML = '';
-        for( let move of pokeInfo.moves){
-            pokeMoves.innerHTML += `<li class="list-group-item">${(move.move.name.charAt(0).toUpperCase() + move.move.name.slice(1)).replace("-"," ")}</li>`;
-        }
+        //Create a list of abilites the pokemon has by default, and displays the ability's short_description using a popover
         pokeAbilities.innerHTML = '';
+        //Loops through all the abilites
         for( let ability of pokeInfo.abilities){
+            //Fetch each one's specific data in order to create the short_description popover
             let skillData = await fetch(ability.ability.url);
             let skillDescription = await skillData.json();
-            console.log(skillDescription);
             
+            //Loops through all the skilldescription entries in order to finde the correct language (en)
             for(let description of skillDescription.effect_entries){
                 if(description.language.name == 'en') {
                     pokeAbilities.innerHTML += `
@@ -199,9 +322,12 @@ async function updateModal(pokemon){
                 }
             }
         }
+        //Uses the previously fetched stats data in order to create a bars graph to display the pokemon statistics
         pokeStats.innerHTML = '';
+        //Loops through all the stats and dynamically create their bars
         for( let stat of pokeInfo.stats){
             let color = 'bg-success';
+            //Verifies the stat name in order to personalize the bar color
             if(stat.stat.name == 'hp') color = 'bg-danger';
             if(stat.stat.name == 'speed') color = 'bg-info';
             if(stat.stat.name == 'attack') color = 'bg-warning';
@@ -213,31 +339,32 @@ async function updateModal(pokemon){
             </div>`;
         }
         
+        //Create an Accordion with all the moves the pokemon can learn
+        pokeLearnableMoves.textContent = pokeInfo.moves.length;
+        pokeMoves.innerHTML = '';
+        for( let move of pokeInfo.moves){
+            pokeMoves.innerHTML += `<li class="list-group-item">${(move.move.name.charAt(0).toUpperCase() + move.move.name.slice(1)).replace("-"," ")}</li>`;
+        }
+        console.log(pokeInfo);
+        let evolution = evolutionFinder(pokeInfo);
 
+        let output = '';
+        if((await evolution).cName == 'Eeve'){
+
+        } else if((await evolution).cIndex < (await evolution).totalEvolutions-1){
+            output = `
+            <button href="#" class="btn btn-primary" onclick="animateEvolution(${(await evolution).cId}, ${(await evolution).nId}, '${(await evolution).cSpriteUrl}', '${(await evolution).nSpriteUrl}', '${(await evolution).nName.charAt(0).toUpperCase() + (await evolution).nName.slice(1).replace("-"," ")}')">Evolve</button>
+            `;
+        }
+        modalFooter.innerHTML = output;
 }
-
-async function getInfo(kind, id) {
-    const info = await fetch(`https://pokeapi.co/api/v2/${kind}/${id}`);
-    var data = await info.json();
-    return data;
-}
-
-async function getPlist() {
-    try {
-        //I'm usign a 898 limit because higher id pokemons are just variants / evolutions of the main ones (they'll be shown on the pokemon page)
-        const requestList = await fetch('https://pokeapi.co/api/v2/pokemon/?limit=898');
-        const data = await requestList.json();
-        pokemonList = data.results;
-        console.log(pokemonList);
-        showPlist(pokemonList);
-
-    } catch (error) {
-        console.error(error);
-    }
-}
-
 
 function showPlist(pokemons){
+    //Sets the Badge number to show the ammount of results
+    let pokelistResults = document.getElementById('pokelistResults');
+    pokelistResults.textContent = pokemons.length;
+
+
     console.log(pokemons);
     let output = ''
     for( let pokemon of pokemons ){
@@ -267,5 +394,69 @@ function showPlist(pokemons){
     PokemonList.innerHTML = output;
 }
 
+function updateFiltersInfo(){
+    let pokeFilters = document.getElementById('pokeFilters');
+    let output = '';
+    for(let filter of ActiveFilters){
+        if(filter.kind != 'searchString'){
+            output += `
+            <button type="button" class="btn btn-danger col-6 pokeFilter" onclick="removeFilter(${filter.filterContent})">${filter.name.charAt(0).toUpperCase() + filter.name.slice(1)}</button>
+            `;
+        }
+    }
+    pokeFilters.innerHTML = output;
+
+}
+
+async function defineFiltersDropdown(){
+    let filtersDropdown = document.getElementById('dropdownFilters');
+    let filters = await getInfo('type', '');
+    console.log(filters);
+    let output = '';
+    for(let filter of filters.results){
+        let pokeTypeId = filter.url.replace("https://pokeapi.co/api/v2/type/","");
+        pokeTypeId = pokeTypeId.replace("/", "");
+
+        output += `
+        <li type="button" class="btn btn-outline-primary" onclick="filterByType(${pokeTypeId}, '${filter.name}')">${filter.name}</li>
+        `;
+    }
+    filtersDropdown.innerHTML = output;
+}
+
+function animateEvolution(cId, nId, cImg, nImg, nName){
+    scrollTo(top);
+    let animation = document.getElementById('animation');
+    animation.innerHTML = `
+    <img id="cImg" class="animationImg" src="${cImg}">
+    <img id="nImg" class"animationImg" src="${nImg}">
+    `;
+    animation.style.visibility = "visible";
+    updateModal('param', '', nName, nId)
+    new Audio('assets/evolution.mp3').play()
+    function animateC(){
+        document.getElementById('cImg').style.visibility = "visible";
+        document.getElementById('nImg').style.visibility = "hidden";
+        animateN();
+    }
+    function animateN(){
+        document.getElementById('nImg').style.visibility = "visible";
+        document.getElementById('cImg').style.visibility = "hidden";
+        animateC();
+    }
+    for(let i = 0; i < 30; i++){
+        setTimeout(animateC, 500);
+        setTimeout(animateN, 500);
+    }
+    setTimeout(animationDestroyer, 4000);
+    
+    function animationDestroyer(){
+        animation.style.visibility = "hidden";
+        document.getElementById('cImg').style.visibility = "hidden";
+        document.getElementById('nImg').style.visibility = "hidden";
+    }
+}
+
 //Fetch the pokemon list when the page is loaded
 getPlist();
+defineFiltersDropdown();
