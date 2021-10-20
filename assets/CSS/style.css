@@ -8,14 +8,49 @@
 #pokemon {
     grid-template-columns: 3fr 1fr;
 }
-
-.vertical {
-    width: 60%;
+.progress {
+    width: 70%;
     height: 20px;
 }
-.vertical {
-    box-shadow: inset 0px 4px 6px #ccc;
-  }
+
 .progress-bar {
     box-shadow: inset 0px 4px 6px rgba(100,100,100,0.6);
 }
+
+.popover__title {
+    font-size: 24px;
+    line-height: 36px;
+    text-decoration: none;
+    color: rgb(228, 68, 68);
+    text-align: center;
+    padding: 15px 0;
+}
+  
+.popover-div {
+    position: relative;
+    display: inline-block;
+}
+
+.popover-body {
+    opacity: 0;
+    visibility: hidden;
+    position: absolute;
+    transform: translate(0, 10px);
+    top: 120px;
+    background-color: #ffffff;
+    padding: 1.5rem;
+    width: auto;
+}
+
+
+.popover-div:hover .popover-body {
+    z-index: 100;
+    opacity: 1;
+    visibility: visible;
+    transform: translate(0, -60px);
+    transition: all 0.5s ease-in-out(1);
+}
+.popover-content {
+    text-align: center;
+}
+  
